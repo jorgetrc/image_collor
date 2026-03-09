@@ -51,3 +51,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Update Kubernetes manifests in k8s-workflow repo
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          NEW_TAG: ${{ steps.tag_version.outputs.new_tag }}
+          DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/image-collor
+          IMAGE_NAME: jldevops01/image-collor 
+        run: |
+          # Clona o repositório de manifestos
+          git clone https://x-access-token:${PAT_TOKEN}@github.com/jorgetrc/k8s-workflow.git
+          cd k8s-workflow
+          
+          # Configura o git
+          git config user.name "GitHub Actions CI"
+          git config user.email "actions@github.com"
+          
+          # Navega até a pasta base e atualiza a imagem com Kustomize
+          cd base
+          
+          # Atualiza a tag no kustomization.yml da base
+          kustomize edit set image ${IMAGE_NAME}=${IMAGE_NAME}:${NEW_TAG}
+          
+          # Comita e faz o push
+          git commit -am "chore: update image tag to ${NEW_TAG}"
+          git push origin main
